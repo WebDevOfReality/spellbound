@@ -1,5 +1,9 @@
 # Dossier: discovery for Spellbound
 
+Spellbound's scope is **all of ASL**: learning tools first, then translation over time.
+**Fingerspelling is the proof of concept**, the first slice we build to prove the pipeline. Much of
+this first round of discovery focuses on it for that reason.
+
 This is the collected findings from planning and discovery: one topic per file, with sources cited.
 It's a living record, so update it when we learn something, and mark anything unverified as
 **(unverified)**.

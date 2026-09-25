@@ -1,22 +1,32 @@
 # Spellbound
 
-**An open-source ASL fingerspelling trainer: on-device, free, and built with Deaf educators and families.**
+**An open-source American Sign Language (ASL) learning and translation project: on-device, free, and built with Deaf educators and families.**
 
 About 95% of deaf and hard-of-hearing children are born to hearing parents
 ([Mitchell & Karchmer, 2004](https://eric.ed.gov/?id=EJ747626)). Many of those families are learning
-ASL at the same time as their kids. Spellbound starts small: a learner fingerspells to a webcam and
-gets instant, friendly feedback. It runs in the browser on ordinary school and home devices, and
-**video never leaves the device**.
+ASL at the same time as their kids. Spellbound's goal is tools for **all of ASL**:
+- practice and feedback for learners
+- vocabulary and phrases
+- over time, help translating between ASL and English
 
-> **Status:** iteration 0 (discovery). There's nothing to install yet. See the [roadmap](docs/roadmap.md).
+It runs in the browser on ordinary school and home devices, and **video never leaves the device**.
+
+**We start with fingerspelling as the proof of concept.** It's the smallest well-defined slice of the
+language, with good open data, and it proves out the whole pipeline: camera → hand tracking → small
+on-device model → feedback. Each later iteration extends the same pipeline to more of ASL, adding
+signs, movement, facial grammar and sentences. See the [roadmap](docs/roadmap.md).
+
+> **Status:** iteration 0 (discovery). There's nothing to install yet. The next step is the
+> fingerspelling proof of concept.
 
 ## What this is, and what it is not
 
-- **It is** a practice tool for learners, especially hearing family members of Deaf kids, and a place
-  to grow toward vocabulary practice and, much later, translation research.
-- **It is not** an interpreter and not a replacement for qualified human interpreters, Deaf teachers,
-  or ASL classes. ASL is a full language with its own grammar, facial grammar, and use of space.
-  Fingerspelling is a small part of it.
+- **It is** a growing set of ASL tools. It starts as a practice tool for learners (especially hearing
+  family members of Deaf kids), then grows toward vocabulary and conversation practice and, over time,
+  ASL ↔ English translation.
+- **It is not** a replacement for qualified human interpreters, Deaf teachers, or ASL classes. ASL is
+  a full language with its own grammar, facial grammar, and use of space. Any translation features
+  will be honest about their limits.
 - **It is built with** the Deaf community, not just for them. See
   [dossier/01-deaf-community-and-ethics.md](dossier/01-deaf-community-and-ethics.md).
 

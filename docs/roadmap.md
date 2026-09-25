@@ -1,5 +1,9 @@
 # Roadmap
 
+**The target is all of ASL.** Fingerspelling (iterations 1–4) is the proof of concept. It builds and
+proves the camera → landmarks → small model → feedback pipeline. Later iterations extend that
+pipeline to signs, movement, facial grammar and sentences.
+
 Small iterations. Each one has a single goal and a concrete "done when". We don't start the next
 iteration until the current one's done-when is true, or until we've written down why we're changing
 course (as an ADR in `decisions/`).
