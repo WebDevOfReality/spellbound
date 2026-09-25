@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spellbound spike 00 — landmarks</title>
+<style>
+  :root { --bg:#fafaf7; --fg:#1d1d1b; --muted:#6b6b66; --accent:#6d4aff; --card:#fff; --line:#e4e2dc; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#141413; --fg:#eeece6; --muted:#9c9a93; --card:#1f1f1d; --line:#33322f; } }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.5 system-ui, sans-serif; background:var(--bg); color:var(--fg); }
+  main { max-width:960px; margin:0 auto; padding:16px; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  p { color:var(--muted); margin:0 0 12px; }
+  .stage { position:relative; width:100%; aspect-ratio:4/3; background:#000; border-radius:12px; overflow:hidden; }
+  video, canvas { position:absolute; inset:0; width:100%; height:100%; transform:scaleX(-1); object-fit:cover; }
+  .row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:12px 0; }
+  button { font:inherit; padding:8px 14px; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--fg); cursor:pointer; }
+  button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .guess { font-size:64px; font-weight:700; min-width:1.2em; text-align:center; color:var(--accent); }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:6px 10px; font-variant-numeric:tabular-nums; }
+  kbd { border:1px solid var(--line); border-radius:4px; padding:0 4px; font-size:13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Spike 00 — hand landmarks</h1>
+  <p>Everything runs in this browser tab; no video leaves the device. Hold a letter and press its
+     key (<kbd>a</kbd>–<kbd>z</kbd>) to save a few examples. The big letter is a nearest-neighbour
+     guess over <em>your own</em> saved examples (rung 0 in <code>dossier/05</code>).</p>
+
+  <div class="row">
+    <button class="primary" id="start">Start camera</button>
+    <button id="download" disabled>Download samples (JSON)</button>
+    <button id="clear" disabled>Clear samples</button>
+    <span class="stat" id="fps">— fps</span>
+    <span class="stat" id="hand">no hand</span>
+    <span class="stat" id="count">0 samples</span>
+  </div>
+
+  <div class="row" style="align-items:stretch">
+    <div class="stage" style="flex:1 1 480px"><video id="video" playsinline muted></video><canvas id="canvas"></canvas></div>
+    <div style="flex:0 0 120px; display:flex; flex-direction:column; align-items:center; justify-content:center">
+      <div class="guess" id="guess">·</div>
+      <div class="stat" id="dist">—</div>
+    </div>
+  </div>
+</main>
+
+<script type="module">
+import { FilesetResolver, HandLandmarker, DrawingUtils }
+  from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/vision_bundle.mjs";
+
+const $ = (id) => document.getElementById(id);
+const video = $("video"), canvas = $("canvas"), ctx = canvas.getContext("2d");
+const samples = [];              // { label, handedness, raw: [[x,y,z]x21], norm: number[63] }
+let landmarker, latest = null;
+
+// Normalization draft (see dossier/05): wrist origin, scale by palm size (wrist→middle MCP),
+// mirror left hands to right. Rotation is deliberately KEPT — orientation separates G/H/P/Q.
+function normalize(lms, handedness) {
+  const w = lms[0], m = lms[9];
+  const scale = Math.hypot(m.x - w.x, m.y - w.y, m.z - w.z) || 1;
+  const flip = handedness === "Left" ? -1 : 1;
+  return lms.flatMap((p) => [flip * (p.x - w.x) / scale, (p.y - w.y) / scale, (p.z - w.z) / scale]);
+}
+
+function nearest(vec) {
+  let best = null, bestD = Infinity;
+  for (const s of samples) {
+    let d = 0;
+    for (let i = 0; i < vec.length; i++) d += (vec[i] - s.norm[i]) ** 2;
+    if (d < bestD) { bestD = d; best = s.label; }
+  }
+  return best ? { label: best, d: Math.sqrt(bestD) } : null;
+}
+
+async function start() {
+  $("start").disabled = true; $("start").textContent = "Loading model…";
+  const fileset = await FilesetResolver.forVisionTasks(
+    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm");
+  landmarker = await HandLandmarker.createFromOptions(fileset, {
+    baseOptions: {
+      modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task",
+      delegate: "GPU",
+    },
+    runningMode: "VIDEO",
+    numHands: 1,
+  });
+  video.srcObject = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+  await video.play();
+  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+  $("start").textContent = "Running";
+  requestAnimationFrame(loop);
+}
+
+const draw = new DrawingUtils(ctx);
+let lastT = performance.now(), frames = 0;
+function loop(now) {
+  const res = landmarker.detectForVideo(video, now);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (res.landmarks.length) {
+    const lms = res.landmarks[0];
+    // MediaPipe labels handedness assuming a mirrored (selfie) image.
+    const handed = res.handedness[0][0].categoryName;
+    draw.drawConnectors(lms, HandLandmarker.HAND_CONNECTIONS, { color: "#6d4aff", lineWidth: 4 });
+    draw.drawLandmarks(lms, { color: "#ffffff", fillColor: "#6d4aff", radius: 4 });
+    latest = { handedness: handed, raw: lms.map((p) => [p.x, p.y, p.z]), norm: normalize(lms, handed) };
+    $("hand").textContent = handed + " hand";
+    const g = nearest(latest.norm);
+    $("guess").textContent = g ? g.label.toUpperCase() : "·";
+    $("dist").textContent = g ? "d " + g.d.toFixed(2) : "—";
+  } else {
+    latest = null;
+    $("hand").textContent = "no hand"; $("guess").textContent = "·"; $("dist").textContent = "—";
+  }
+  frames++;
+  if (now - lastT > 1000) { $("fps").textContent = frames + " fps"; frames = 0; lastT = now; }
+  requestAnimationFrame(loop);
+}
+
+function updateCount() {
+  $("count").textContent = samples.length + " samples";
+  $("download").disabled = $("clear").disabled = samples.length === 0;
+}
+
+addEventListener("keydown", (e) => {
+  if (!latest || !/^[a-z]$/.test(e.key)) return;
+  samples.push({ label: e.key, t: Date.now(), ...latest });
+  updateCount();
+});
+
+$("start").onclick = () => start().catch((err) => {
+  $("start").textContent = "Error — see console"; console.error(err);
+});
+$("clear").onclick = () => { samples.length = 0; updateCount(); };
+$("download").onclick = () => {
+  const blob = new Blob([JSON.stringify({ version: 0, mediapipe: "tasks-vision@1.0.1", samples }, null, 1)],
+    { type: "application/json" });
+  const a = Object.assign(document.createElement("a"),
+    { href: URL.createObjectURL(blob), download: "spellbound-samples.json" });
+  a.click(); URL.revokeObjectURL(a.href);
+};
+</script>
+</body>
+</html>

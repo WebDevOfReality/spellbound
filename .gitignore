@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.ipynb_checkpoints/
+
+# Node
+node_modules/
+dist/
+
+# Data and model weights: never commit, see dossier/03-datasets.md
+data/
+*.parquet
+*.onnx
+*.pt
+*.safetensors
+recordings/
+
+# Editors / OS
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
